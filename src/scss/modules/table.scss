@@ -1,0 +1,51 @@
+.tfaf_admin_wrapper{
+  .cme-table {
+    width: 100%;
+    border-spacing: 5px;
+    text-align: center;
+
+    &,
+    & th,
+    & td {
+      border: 1px solid #ccc;
+      border-collapse: collapse;
+      padding: 10px;
+    }
+
+    & th {
+      background-color: #f5f5f5;
+    }
+
+    & .up_button,
+    & .down_button {
+      margin: 0 5px !important;
+    }
+
+    & .inline-block {
+      display: inline-block;
+    }
+  }
+
+  .text-center {
+    text-align: center;
+  }
+
+  #tfaf-button-save-order {
+    display: none;
+  }
+
+  .menu-entry {
+    opacity: 1;
+    transition: opacity 500ms linear;
+
+    &.hide {
+      opacity: 0.3;
+      transition: opacity 500ms linear;
+    }
+  }
+
+  .cme-default-table {
+    margin-top: 20px;
+  }
+
+}

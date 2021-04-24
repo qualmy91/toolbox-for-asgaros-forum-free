@@ -1,0 +1,85 @@
+.tfaf_wrapper {
+
+  .profile-section-header {
+    display: block;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    line-height: 20px;
+    margin-top: 24px;
+    padding-bottom: 4px;
+  }
+
+  .statistics-element-icon,
+  .profile-section-header-icon {
+    padding-right: 8px;
+  }
+
+  .far {
+    font-weight: 400;
+  }
+
+  .fas {
+    font-weight: 900;
+  }
+
+  .statistics-element {
+    width: 165px;
+    display: inline-block;
+    margin: 10px 0;
+    border-right: 1px solid #eee;
+    text-align: center;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    .element-number {
+      font-size: 16px;
+      line-height: 30px;
+    }
+  }
+
+
+  .history-element {
+    display: table;
+    width: 100%;
+    border-bottom: 1px solid #eeeeee;
+    padding: 4px 8px;
+    box-sizing: border-box;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .history-name {
+      display: table-cell;
+      box-sizing: border-box;
+      vertical-align: middle;
+    }
+
+    .history-title,
+    .history-topic {
+      line-height: 24px;
+      display: block;
+    }
+
+    a {
+      border: none;
+      text-decoration: none;
+      box-shadow: none;
+    }
+
+    .history-topic, .history-time {
+      font-style: italic;
+      font-size: smaller !important;
+    }
+
+    .history-time {
+      display: table-cell;
+      box-sizing: border-box;
+      vertical-align: middle;
+      width: 160px;
+      text-align: right;
+    }
+  }
+}
