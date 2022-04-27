@@ -64,7 +64,9 @@ class AuthorPageController extends BaseController
     public function tfaf_ap_activity_func()
     {
 
-
+        // enqueue style
+        wp_enqueue_style('tfaf_activity_style', TFAF_PLUGIN_URL . '/assets/um_integration.css');
+        
         $curauth = (get_query_var('author_name')) ? get_user_by('slug', get_query_var('author_name')) : get_userdata(get_query_var('author'));
         $profile_id = $curauth->ID;
         ob_start();
@@ -103,7 +105,10 @@ class AuthorPageController extends BaseController
      */
     public function tfaf_ap_history_func()
     {
-
+    
+        // enqueue style
+        wp_enqueue_style('tfaf_activity_style', TFAF_PLUGIN_URL . '/assets/um_integration.css');
+        
         $curauth = (get_query_var('author_name')) ? get_user_by('slug', get_query_var('author_name')) : get_userdata(get_query_var('author'));
         $user_id = $curauth->ID;
         
