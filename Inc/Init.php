@@ -3,6 +3,7 @@
 namespace Tfaf\Inc;
 
 use Tfaf\Inc\Base\UltimateMemberIntegrationController;
+use Tfaf\Inc\Base\AuthorPageController;
 
 final class Init
 {
