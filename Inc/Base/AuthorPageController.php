@@ -53,8 +53,8 @@ class AuthorPageController extends BaseController
         $this->settings->addSubPages($this->subpages)->register();
 
         // register shortcodes
-        add_shortcode('tfaf__ap_activity', array($this, 'tfaf_ap_activity_func'));
-        add_shortcode('tfaf__ap_history', array($this, 'tfaf_ap_history_func'));
+        add_shortcode('tfaf_ap_activity', array($this, 'tfaf_ap_activity_func'));
+        add_shortcode('tfaf_ap_history', array($this, 'tfaf_ap_history_func'));
 
     }
 
