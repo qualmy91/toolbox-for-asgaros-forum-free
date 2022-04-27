@@ -27,6 +27,11 @@ class AdminCallbacks
     {
         return require_once TFAF_PLUGIN_PATH . 'template/ultimate-member-integration.php';
     }
+    
+        public function shortcodesAP()
+    {
+        return require_once TFAF_PLUGIN_PATH . 'template/author-page-shortdcode.php';
+    }
 
     public function profileTabUm()
     {
