@@ -10,7 +10,7 @@
 
     <p><strong>Preview:</strong></p>
     <div class="tfaf-preview">
-        <?php echo do_shortcode('[tfaf_ap_activity]'); ?>
+        <img src="<?php echo TFAF_PLUGIN_URL . 'assets/images/ap_activity.jpg' ?>">
     </div>
 
     <h2><?php esc_html_e('Post History', 'toolbox-for-asgaros-forum') ?></h2>
@@ -20,8 +20,8 @@
     <p><?php esc_html_e('You can also use the function "Profile Tab for Ultimate Member" to add a tab at the Profile of Ultimate Member. This Shortcode will be automatically included in this tab.', 'toolbox-for-asgaros-forum') ?> </p>
     <p><strong><?php esc_html_e('Preview:', 'toolbox-for-asgaros-forum') ?></strong></p>
     <div class="tfaf-preview">
-        <?php echo do_shortcode('[tfaf_ap_history]'); ?>
+       <img src="<?php echo TFAF_PLUGIN_URL . 'assets/images/ap_user_history.jpg' ?>">
     </div>
-    <img src="<?php echo TFAF_PLUGIN_URL . 'assets/images/user_history.jpg' ?>">
+    
 
 </div>
