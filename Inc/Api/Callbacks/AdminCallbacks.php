@@ -30,7 +30,7 @@ class AdminCallbacks
     
         public function shortcodesAP()
     {
-        return require_once TFAF_PLUGIN_PATH . 'template/author-page-shortdcode.php';
+        return require_once TFAF_PLUGIN_PATH . 'template/author-page-shortcode.php';
     }
 
     public function profileTabUm()
