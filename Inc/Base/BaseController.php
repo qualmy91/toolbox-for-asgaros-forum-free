@@ -19,6 +19,7 @@ class BaseController
             'cme_manager' => esc_html__('Activate Custom Menu Entry Manager', 'toolbox-for-asgaros-forum'),
             'cu_manager' => esc_html__('Activate Custom URL Manager', 'toolbox-for-asgaros-forum'),
             'um_shortcode_manager' => esc_html__('Activate Integration for Ultimate Member', 'toolbox-for-asgaros-forum'),
+            'ap_shortcode_manager' => esc_html__('Activate Shortcodes for WP Author Page', 'toolbox-for-asgaros-forum'),
             'iu_manager' => esc_html__('Activate Inline Image Upload', 'toolbox-for-asgaros-forum'),
             'ai_manager' => esc_html__('Activate Autosubscribtion', 'toolbox-for-asgaros-forum'),
         );
