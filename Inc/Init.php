@@ -19,6 +19,7 @@ final class Init
         require_once TFAF_PLUGIN_PATH . 'Inc/Base/AutoSubscription.php';
         require_once TFAF_PLUGIN_PATH . 'Inc/Base/CustomUrlController.php';
         require_once TFAF_PLUGIN_PATH . 'Inc/Base/UltimateMemberIntegrationController.php';
+        require_once TFAF_PLUGIN_PATH . 'Inc/Base/AuthorPageController.php';
         require_once TFAF_PLUGIN_PATH . 'Inc/Base/ImageUploadController.php';
 
 
@@ -29,6 +30,7 @@ final class Init
             Base\CustomMenuController::class,
             Base\CustomUrlController::class,
             Base\UltimateMemberIntegrationController::class,
+            Base\AuthorPageController::class,
             Base\ImageUploadController::class,
             Base\AutoSubscription::class,
         ];
