@@ -3,6 +3,10 @@
 
 namespace Tfaf\Inc\Api\Callbacks;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Base/BaseController.php';
 
 class CuCallbacks
@@ -49,8 +53,8 @@ class CuCallbacks
         $input = get_option($option_name);
         $value = isset($input[$name]) ? $input[$name] : '';
 
-        echo '<input type="text" class="regular-text" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="' . $value . '" placeholder="' . $args['placeholder'] . '" pattern="^/.+" > ' .
-            $args['url_extension'];
+        echo '<input type="text" class="regular-text" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="' . esc_attr($value) . '" placeholder="' . esc_attr($args['placeholder']) . '" pattern="^/.+" > ' .
+            esc_html($args['url_extension']);
     }
 }

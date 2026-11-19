@@ -1,10 +1,10 @@
 === Toolbox for Asgaros Forum ===
 Contributors: qualmy91
-Donate link: https://www.dominikrauch.de/donate/
+Donate link: https://donate.stripe.com/bIY7vydI06HCg6s6os
 Tags: forum, asgarso forum, ultimate member, toolbox
-Requires at least: 4.6
-Tested up to: 5.7
-Stable tag: 1.2.4
+Requires at least: 4.9
+Tested up to: 7.1
+Stable tag: 1.2.5
 Requires PHP: 5.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -13,14 +13,12 @@ This toolbox allows you to extend the functionality of Asgaros Forum.
 
 == Description ==
 
-Use Toolbox for Asgaros Forum to customize your Forum without the struggle to write some code. You can easily create
-some custom menu entries or change the url to the User Profile.
+Use Toolbox for Asgaros Forum to customize your Forum without the struggle to write some code. You can easily create some custom menu entries or change the url to the User Profile.
 
 = Support & Documentation =
 
-If you need some further help with Toolbox for Asgaros Forum please check out the
-[Documentation](https://www.dominikrauch.de/en/toolbox-for-asgaros-forum-docs/) or contact me over the
-[Support Forum](https://wordpress.org/support/plugin/toolbox-for-asgaros-forum/).
+If you need further help with Toolbox for Asgaros Forum, please visit our [Documentation](https://www.toolboxforasgaros.com/documentation/). For personalized assistance, consider booking an appointment with us at domra Web Solutions. Visit our [Contact Page](https://www.domrawebsolutions.com/contact/) to schedule setup and customization services. Enhance your forum experience with our Toolbox for Asgaros Forum plugin. For community support, please visit our [Support Forum](https://wordpress.org/support/plugin/toolbox-for-asgaros-forum/).
+
 
 = Features =
 
@@ -57,6 +55,12 @@ Just go to the [Official Translation Tool](https://translate.wordpress.org/proje
 8. Inline Image Upload
 
 == Changelog ==
+= 1.2.5 =
+* Security: Fixed authenticated path traversal vulnerability (CVE-2026-118521).
+* Security: Added strict filename and path validation for inline image handling.
+* Security: Improved temporary image cleanup and file handling.
+* Security: Added nonce verification and upload permission checks.
+* Fix: Corrected upload directory filter removal.
 = 1.2.4 =
 * Add: Hide Forum Menu and Forum Header
 * Fix: Delete last custom menu entry

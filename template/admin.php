@@ -1,3 +1,8 @@
+<?php
+if (!defined('ABSPATH')) {
+    exit;
+}
+?>
 <div class="tfaf_admin_wrapper">
     <h1><?php esc_html_e('Toolbox for Asgaros Forum', 'toolbox-for-asgaros-forum') ?></h1>
 

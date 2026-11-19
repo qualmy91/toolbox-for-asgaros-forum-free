@@ -68,22 +68,7 @@ final class Init
 
         }
 
-        // Check notification response
-        if ( isset( $_GET['tfaf_notify'] ) ) {
-            $notify_response = esc_attr( $_GET['tfaf_notify'] );
-
-            if ( $notify_response == 0) {
-                // Reset notification setting
-                $plugin_options['notification'] = 0;
-                update_option('tfaf_plugin_settings', $plugin_options);
-            } elseif ($notify_response == 2){
-                // Set notification setting to never ask again
-                $plugin_options['notification'] = 2;
-                update_option('tfaf_plugin_settings', $plugin_options);
-            }
-        }
-
-
+        add_action('admin_init', array(__CLASS__, 'handle_notification_response'));
 
         // Check for new notifications
         if ($plugin_options['notification_message'] !== '' && $plugin_options['notification'] == 1) {
@@ -95,6 +80,27 @@ final class Init
             if (method_exists($service, 'register')) {
                 $service->register();
             }
+        }
+    }
+
+    public static function handle_notification_response()
+    {
+        if (!current_user_can('manage_options') ||
+            !isset($_GET['_wpnonce']) ||
+            !is_string($_GET['_wpnonce']) ||
+            !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'tfaf_notify')) {
+            return;
+        }
+
+        if (!isset($_GET['tfaf_notify']) || !is_string($_GET['tfaf_notify'])) {
+            return;
+        }
+
+        $response = sanitize_text_field(wp_unslash($_GET['tfaf_notify']));
+        if ($response === '0' || $response === '2') {
+            $plugin_options = get_option('tfaf_plugin_settings');
+            $plugin_options['notification'] = (int) $response;
+            update_option('tfaf_plugin_settings', $plugin_options);
         }
     }
 
@@ -125,7 +131,11 @@ final class Init
             'iu_500' => esc_html__(' Your forum reached 500 image uploads with the Inline Upload Function of Toolbox for Asgaros Forum. This functionality helped your users a lot to easily upload images and made your forum more user friendly.', 'toolbox-for-asgaros-forum') ,
         );
 
-        $notification_message = get_option('tfaf_plugin_settings')['notification_message'];
+        $plugin_options = get_option('tfaf_plugin_settings');
+        if (empty($plugin_options['notification']) || (int) $plugin_options['notification'] !== 1) {
+            return;
+        }
+        $notification_message = $plugin_options['notification_message'];
 
         if (!array_key_exists($notification_message, $messages)) return;
         $message = $messages[$notification_message];
@@ -133,14 +143,14 @@ final class Init
 
         echo '<div class="notice notice-success">';
 
-        echo '<p>' . $message . '</p><br>';
+        echo '<p>' . wp_kses($message, array('a' => array('href' => true))) . '</p><br>';
 
         echo '<b>' . esc_html__('Can you please do me a quick favor? Please give Toolbox for Asgaros Forum a 5-star rating on WordPress and keep me motivated.', 'toolbox-for-asgaros-forum') . '</b>';
 
 
         echo '<ul><li><a href="https://wordpress.org/support/plugin/toolbox-for-asgaros-forum/reviews/" target="_blank">' . esc_html__('Of course, you deserve my help', 'toolbox-for-asgaros-forum') . '</a></li>';
-        echo '<li><a href="' .  get_admin_url() . '?tfaf_notify=0">' . esc_html__('Maybe later', 'toolbox-for-asgaros-forum').'</a></li>';
-        echo '<li><a href="' . get_admin_url() . '?tfaf_notify=2">' . esc_html__('I already did', 'toolbox-for-asgaros-forum').'</a></li>';
+        echo '<li><a href="' .  esc_url(wp_nonce_url(get_admin_url() . '?tfaf_notify=0', 'tfaf_notify')) . '">' . esc_html__('Maybe later', 'toolbox-for-asgaros-forum').'</a></li>';
+        echo '<li><a href="' . esc_url(wp_nonce_url(get_admin_url() . '?tfaf_notify=2', 'tfaf_notify')) . '">' . esc_html__('I already did', 'toolbox-for-asgaros-forum').'</a></li>';
         echo '</ul></div >';
 
     }

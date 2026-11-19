@@ -3,6 +3,10 @@
 
 namespace Tfaf\Inc\Api\Callbacks;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Base/BaseController.php';
 
 use Tfaf\Inc\Base\BaseController;
@@ -31,8 +35,8 @@ class AsCallbacks extends BaseController
         $checkbox = get_option($option_name);
         $checked = isset($checkbox[$name]) ? ($checkbox[$name] ? true : false) : false;
 
-        echo '<div class="' . $classes . '"><input type="checkbox" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="1" ' . ($checked ? 'checked' : '') . '><label for="' . $name .
+        echo '<div class="' . esc_attr($classes) . '"><input type="checkbox" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="1" ' . ($checked ? 'checked' : '') . '><label for="' . esc_attr($name) .
             '"><div></div></label></div>';
     }
 

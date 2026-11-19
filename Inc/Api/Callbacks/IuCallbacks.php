@@ -3,6 +3,10 @@
 
 namespace Tfaf\Inc\Api\Callbacks;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Base/BaseController.php';
 
 class IuCallbacks
@@ -64,9 +68,9 @@ class IuCallbacks
         $input = get_option($option_name);
         $value = isset($input[$name]) ? $input[$name] : '';
 
-        echo '<input type="text" class="regular-text" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="' . $value . '" placeholder="' . $args['placeholder'] . '"> ' .
-            $args['field_extension'];
+        echo '<input type="text" class="regular-text" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="' . esc_attr($value) . '" placeholder="' . esc_attr($args['placeholder']) . '"> ' .
+            esc_html($args['field_extension']);
     }
 
 
@@ -85,8 +89,8 @@ class IuCallbacks
         $checked = isset($checkbox[$name]) ? $checkbox[$name] : false;
 
 
-        echo '<div class="' . $classes . '"><input type="checkbox" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="1" class="" ' . ($checked ? 'checked' : '') . '><label for="' . $name .
+        echo '<div class="' . esc_attr($classes) . '"><input type="checkbox" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="1" class="" ' . ($checked ? 'checked' : '') . '><label for="' . esc_attr($name) .
             '"><div></div></label></div>';
     }
 }

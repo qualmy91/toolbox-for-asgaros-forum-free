@@ -3,6 +3,10 @@
 
 namespace Tfaf\Inc\Api\Callbacks;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Base/BaseController.php';
 
 class CmeCallbacks
@@ -69,6 +73,25 @@ class CmeCallbacks
     }
 
 
+    public static function get_edit_position()
+    {
+        if (!current_user_can('manage_options') ||
+            !isset($_POST['tfaf_edit_nonce']) ||
+            !is_string($_POST['tfaf_edit_nonce']) ||
+            !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['tfaf_edit_nonce'])), 'tfaf_edit_menu_entry')) {
+            return null;
+        }
+
+        if (!isset($_POST['edit_entry']) || !is_string($_POST['edit_entry'])) {
+            return null;
+        }
+
+        $position = filter_var(sanitize_text_field(wp_unslash($_POST['edit_entry'])), FILTER_VALIDATE_INT, array(
+            'options' => array('min_range' => 1),
+        ));
+        return $position === false ? null : $position;
+    }
+
     /**
      * Sanitize the user input and add the input to the options array
      *
@@ -79,11 +102,25 @@ class CmeCallbacks
     public function cmeSanitize($input)
     {
         // get saved menu entries
-        $output = get_option('tfaf_custom_menu');
+        $output = get_option('tfaf_custom_menu') ?: array();
+
+        // The menu forms submit through options.php with the settings-group nonce.
+        if (!current_user_can('manage_options') ||
+            !isset($_POST['_wpnonce']) ||
+            !is_string($_POST['_wpnonce']) ||
+            !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'tfaf_custom_menu_settings-options')) {
+            return $output;
+        }
 
         // delete menu entry
-        if (isset($_POST["remove"])) {
-            unset($output[$_POST["remove"]]);
+        if (isset($_POST['remove'])) {
+            $position = is_string($_POST['remove'])
+                ? filter_var(sanitize_text_field(wp_unslash($_POST['remove'])), FILTER_VALIDATE_INT)
+                : false;
+            if ($position === false || $position < 1 || !isset($output[$position])) {
+                return $output;
+            }
+            unset($output[$position]);
 
             // Only order array if not empty
             if (!empty($output)) {
@@ -103,11 +140,12 @@ class CmeCallbacks
         }
 
         // Add default menu entry
-        if (isset($_POST["add_default"])) {
+        if (isset($_POST['add_default']) && is_string($_POST['add_default'])) {
+            $default_key = sanitize_key(wp_unslash($_POST['add_default']));
             $default_entries = $this->get_default_entries();
-            if (array_key_exists($_POST["add_default"], $default_entries)) {
+            if (array_key_exists($default_key, $default_entries)) {
                 $entry_position = count($output) + 1;
-                $output[$entry_position] = $default_entries[$_POST['add_default']];
+                $output[$entry_position] = $default_entries[$default_key];
                 $output[$entry_position]['menu_position'] = $entry_position;
 
             }
@@ -116,7 +154,8 @@ class CmeCallbacks
         }
 
         // Add all default menu entries
-        if (isset($_POST["add_all_default"])) {
+        if (isset($_POST['add_all_default']) && is_string($_POST['add_all_default']) &&
+            sanitize_key(wp_unslash($_POST['add_all_default'])) === 'all') {
             $default_entries = $this->get_default_entries();
             foreach ($default_entries as $default_entry) {
                 $entry_position = count($output) + 1;
@@ -128,21 +167,16 @@ class CmeCallbacks
         }
 
         // change menu positions
-        if (isset($_POST["positions"])) {
-
-            // check if something was changed
-            if ($_POST["positions"] == "") {
+        if (isset($_POST['positions']) && is_string($_POST['positions'])) {
+            $order = sanitize_text_field(wp_unslash($_POST['positions']));
+            if ($order === '') {
                 return $output;
             }
 
-            $positions = sanitize_text_field($_POST["positions"]);
-
-            $positions = explode("-", $positions);
-            unset($positions[count($positions) - 1]);
-
-            // validate keys
-            $positions_validate = array_diff_key($output, array_flip($positions));
-            if (!empty($positions_validate)) {
+            $positions = explode('-', rtrim($order, '-'));
+            $positions_validate = array_diff($positions, array_keys($output));
+            if (!empty($positions_validate) || count($positions) !== count($output) ||
+                count(array_unique($positions)) !== count($output)) {
                 add_settings_error('tfaf_custom_menu', esc_attr('tfaf_custom_menu'),
                     esc_html__('Invalid Position.', 'toolbox-for-asgaros-forum'), 'error');
 
@@ -156,6 +190,12 @@ class CmeCallbacks
                 $ordered_output[$i + 1]["menu_position"] = ($i + 1) . "";
             }
             return $ordered_output;
+        }
+
+        if (!is_array($input) || !isset($input['menu_position'], $input['menu_link_text'], $input['menu_url']) ||
+            !is_scalar($input['menu_position']) || !is_string($input['menu_link_text']) ||
+            !is_string($input['menu_url'])) {
+            return $output;
         }
 
         // sanitize and validate input
@@ -226,9 +266,9 @@ class CmeCallbacks
         $disabled = '';
 
         // Check if a existing entry has to be edit
-        if (isset($_POST["edit_entry"])) {
-            $edit_cme = sanitize_text_field($_POST["edit_entry"]);
-            $input = get_option($option_name);
+        $edit_cme = self::get_edit_position();
+        if ($edit_cme !== null) {
+            $input = get_option($option_name) ?: array();
 
             // Check if key is valid
             if (array_key_exists($edit_cme, $input)) {
@@ -240,8 +280,8 @@ class CmeCallbacks
             $disabled = ($name == 'menu_position') ? 'readonly' : '';
         }
 
-        echo '<input type="text" class="regular-text" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="' . $value . '" placeholder="' . $args['placeholder'] . '" ' . $disabled . ' ' . $required . '>';
+        echo '<input type="text" class="regular-text" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="' . esc_attr($value) . '" placeholder="' . esc_attr($args['placeholder']) . '" ' . ($disabled ? 'readonly' : '') . ' ' . ($required ? 'required' : '') . '>';
     }
 
     /**
@@ -253,12 +293,13 @@ class CmeCallbacks
     {
         $name = $args['label_for'];
         $option_name = $args['option_name'];
-        $input = get_option($option_name);
+        $input = get_option($option_name) ?: array();
         $count = count($input) + 1;
 
         // Check if a existing entry has to be edit
-        if (isset($_POST["edit_entry"])) {
-            $count = sanitize_text_field($_POST["edit_entry"]);
+        $edit_cme = self::get_edit_position();
+        if ($edit_cme !== null) {
+            $count = $edit_cme;
 
             // check if position is valid
             if (!array_key_exists($count, $input)) {
@@ -266,8 +307,8 @@ class CmeCallbacks
             }
         }
 
-        echo '<input type="text" class="regular-text" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="' . $count . '" readonly required>';
+        echo '<input type="text" class="regular-text" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="' . esc_attr($count) . '" readonly required>';
 
     }
 
@@ -283,9 +324,9 @@ class CmeCallbacks
         $value = '';
 
         // Check if a existing entry has to be edit
-        if (isset($_POST["edit_entry"])) {
-            $edit_cme = sanitize_text_field($_POST["edit_entry"]);
-            $input = get_option($option_name);
+        $edit_cme = self::get_edit_position();
+        if ($edit_cme !== null) {
+            $input = get_option($option_name) ?: array();
 
             // Check if key is valid
             if (array_key_exists($edit_cme, $input)) {
@@ -295,8 +336,8 @@ class CmeCallbacks
             }
         }
 
-        echo '<input type="text" class="regular-text" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="' . $value . '" placeholder="' . $args['placeholder'] . '" pattern="^(https?:\/\/).+|^(\[).+|^(\/).+" required>';
+        echo '<input type="text" class="regular-text" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="' . esc_attr($value) . '" placeholder="' . esc_attr($args['placeholder']) . '" pattern="^(https?:\/\/).+|^(\[).+|^(\/).+" required>';
 
     }
 
@@ -313,14 +354,15 @@ class CmeCallbacks
         $checked = false;
 
         // Check if a existing entry has to be edit
-        if (isset($_POST["edit_entry"])) {
+        $edit_cme = self::get_edit_position();
+        if ($edit_cme !== null) {
             $checkbox = get_option($option_name);
-            $checked = isset($checkbox[$_POST["edit_entry"]][$name]) ?: false;
+            $checked = isset($checkbox[$edit_cme][$name]) ?: false;
         }
 
 
-        echo '<div class="' . $classes . '"><input type="checkbox" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="1" class="" ' . ($checked ? 'checked' : '') . '><label for="' . $name .
+        echo '<div class="' . esc_attr($classes) . '"><input type="checkbox" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="1" class="" ' . ($checked ? 'checked' : '') . '><label for="' . esc_attr($name) .
             '"><div></div></label></div>';
     }
 
@@ -336,20 +378,21 @@ class CmeCallbacks
         $checked = "0";
 
         // Check if a existing entry has to be edit
-        if (isset($_POST["edit_entry"])) {
+        $edit_cme = self::get_edit_position();
+        if ($edit_cme !== null) {
             $option = get_option($option_name);
-            $checked = isset($option[$_POST["edit_entry"]][$name]) ? $option[$_POST["edit_entry"]][$name] : "0";
+            $checked = isset($option[$edit_cme][$name]) ? $option[$edit_cme][$name] : "0";
         }
 
 
         echo '<div class="radio-group">';
-        echo '<input type="radio" id="tfaf_login_0" name="' . $option_name . '[' . $name . ']" value="0" ' .
+        echo '<input type="radio" id="tfaf_login_0" name="' . esc_attr($option_name) . '[' . esc_attr($name) . ']" value="0" ' .
             checked($checked, 0, false) . '/><label for="tfaf_login_0">All users</label><br>';
 
-        echo '<input type="radio" id="tfaf_login_1" name="' . $option_name . '[' . $name . ']" value="1" ' .
+        echo '<input type="radio" id="tfaf_login_1" name="' . esc_attr($option_name) . '[' . esc_attr($name) . ']" value="1" ' .
             checked($checked, 1, false) . '/><label for="tfaf_login_1">Only logged in</label><br>';
 
-        echo '<input type="radio" id="tfaf_login_2" name="' . $option_name . '[' . $name . ']" value="2" ' .
+        echo '<input type="radio" id="tfaf_login_2" name="' . esc_attr($option_name) . '[' . esc_attr($name) . ']" value="2" ' .
             checked($checked, 2, false) . '/><label for="tfaf_login_2">Only logged out</label><br>';
 
 
@@ -370,8 +413,8 @@ class CmeCallbacks
         $checked = isset($checkbox[$name]) ? ($checkbox[$name] ? true : false) : false;
 
 
-        echo '<div class="' . $classes . '"><input type="checkbox" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="1" class="" ' . ($checked ? 'checked' : '') . '><label for="' . $name .
+        echo '<div class="' . esc_attr($classes) . '"><input type="checkbox" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="1" class="" ' . ($checked ? 'checked' : '') . '><label for="' . esc_attr($name) .
             '"><div></div></label></div>';
     }
 
@@ -380,49 +423,49 @@ class CmeCallbacks
 
         return array(
             'home' => array(
-                'menu_link_text' => esc_html__('Forum', 'asgaros-forum'),
+                'menu_link_text' => esc_html__('Forum', 'toolbox-for-asgaros-forum'),
                 'menu_class' => 'home-link',
                 'menu_url' => '[home]',
                 'menu_only_users' => 0,
             ),
             'profile' => array(
-                'menu_link_text' => esc_html__('Profile', 'asgaros-forum'),
+                'menu_link_text' => esc_html__('Profile', 'toolbox-for-asgaros-forum'),
                 'menu_class' => 'profile-link',
                 'menu_url' => '[profile]',
                 'menu_only_users' => 1,
             ),
             'memberslist' => array(
-                'menu_link_text' => esc_html__('Members', 'asgaros-forum'),
+                'menu_link_text' => esc_html__('Members', 'toolbox-for-asgaros-forum'),
                 'menu_class' => 'members-link',
                 'menu_url' => '[memberslist]',
                 'menu_only_users' => 0,
             ),
             'subscription' => array(
-                'menu_link_text' => esc_html__('Subscriptions', 'asgaros-forum'),
+                'menu_link_text' => esc_html__('Subscriptions', 'toolbox-for-asgaros-forum'),
                 'menu_class' => 'subscriptions-link',
                 'menu_url' => '[subscription]',
                 'menu_only_users' => 1,
             ),
             'activity' => array(
-                'menu_link_text' => esc_html__('Activity', 'asgaros-forum'),
+                'menu_link_text' => esc_html__('Activity', 'toolbox-for-asgaros-forum'),
                 'menu_class' => 'activity-link',
                 'menu_url' => '[activity]',
                 'menu_only_users' => 0,
             ),
             'login' => array(
-                'menu_link_text' => esc_html__('Login', 'asgaros-forum'),
+                'menu_link_text' => esc_html__('Login', 'toolbox-for-asgaros-forum'),
                 'menu_class' => 'login-link',
                 'menu_url' => '[login]',
                 'menu_only_users' => 2,
             ),
             'register' => array(
-                'menu_link_text' => esc_html__('Register', 'asgaros-forum'),
+                'menu_link_text' => esc_html__('Register', 'toolbox-for-asgaros-forum'),
                 'menu_class' => 'register-link',
                 'menu_url' => '[register]',
                 'menu_only_users' => 2,
             ),
             'logout' => array(
-                'menu_link_text' => esc_html__('Logout', 'asgaros-forum'),
+                'menu_link_text' => esc_html__('Logout', 'toolbox-for-asgaros-forum'),
                 'menu_class' => 'logout-link',
                 'menu_url' => '[logout]',
                 'menu_only_users' => 1,

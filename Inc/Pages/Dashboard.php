@@ -3,6 +3,10 @@
 
 namespace Tfaf\Inc\Pages;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/SettingsApi.php';
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/Callbacks/AdminCallbacks.php';
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/Callbacks/ManagerCallbacks.php';

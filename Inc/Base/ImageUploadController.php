@@ -2,6 +2,10 @@
 
 namespace Tfaf\Inc\Base;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/SettingsApi.php';
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/Callbacks/AdminCallbacks.php';
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/Callbacks/IuCallbacks.php';
@@ -53,6 +57,10 @@ class ImageUploadController extends BaseController
         $this->settings->addSubPages($this->subpages)->register();
 
         add_filter('tiny_mce_before_init', array($this, 'tinymce_settings'));
+        add_filter(
+            'no_texturize_tags',
+            array($this, 'tfaf_no_texturize_editor_content')
+        );
 
         add_action('wp_enqueue_scripts', array($this, 'tfaf_enqueue_scripts'));
         add_action('init', array($this, 'tfaf_handle_upload'));
@@ -64,11 +72,66 @@ class ImageUploadController extends BaseController
 
 
     /**
+     * Prevent WordPress from converting quotation marks
+     * inside editor textarea content.
+     *
+     * @param array $tags HTML tags excluded from texturization.
+     * @return array
+     */
+    public function tfaf_no_texturize_editor_content($tags)
+    {
+        if (!in_array('textarea', $tags, true)) {
+            $tags[] = 'textarea';
+        }
+
+        return $tags;
+    }
+
+    /**
      * Enqueue scripts for inline image upload
      */
     function tfaf_enqueue_scripts()
     {
-        wp_enqueue_script('tfaf_tinyMCE', TFAF_PLUGIN_URL . '/assets/image-upload.js', array('jquery'));
+        wp_enqueue_script(
+            'tfaf_tinyMCE',
+            TFAF_PLUGIN_URL . 'assets/image-upload.js',
+            array('jquery'),
+            filemtime(TFAF_PLUGIN_PATH . 'assets/image-upload.js'),
+            false
+        );
+
+        if ($this->can_upload_forum_image()) {
+            wp_localize_script('tfaf_tinyMCE', 'tfafUploadData', array(
+                'nonce' => wp_create_nonce('tfaf_image_upload'),
+            ));
+        }
+    }
+
+    private function can_upload_forum_image()
+    {
+        global $asgarosforum;
+
+        if (!is_user_logged_in() || !is_object($asgarosforum)) {
+            return false;
+        }
+
+        // Older Asgaros releases expose the same permission checks as static methods.
+        $permissions = isset($asgarosforum->permissions)
+            ? $asgarosforum->permissions
+            : 'AsgarosForumPermissions';
+        $userId = get_current_user_id();
+        $isBanned = array($permissions, 'isBanned');
+        if (!is_callable($isBanned) || call_user_func($isBanned, $userId)) {
+            return false;
+        }
+
+        if (isset($asgarosforum->options['upload_permission']) &&
+            $asgarosforum->options['upload_permission'] === 'moderator') {
+            $isModerator = array($permissions, 'isModerator');
+            return is_callable($isModerator) && call_user_func($isModerator, $userId);
+        }
+
+        return true;
     }
 
 
@@ -96,29 +159,60 @@ class ImageUploadController extends BaseController
         if (empty($_GET['tfaf_do_upload']))
             return;
 
-        // Check capabilities
-        if (!is_user_logged_in()) {
-            $this->tfaf_upload_error(null, 'User is not logged in!');
+        if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST' ||
+            !isset($_POST['tfaf_upload_nonce']) ||
+            !is_string($_POST['tfaf_upload_nonce']) ||
+            !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['tfaf_upload_nonce'])), 'tfaf_image_upload')) {
+            $this->tfaf_upload_error(null, 'Invalid upload request.');
             return;
         }
 
-        // Check file upload
-        if (!isset($_FILES['tfaf_file'])) {
-            $this->tfaf_upload_error(null, 'File is not set');
+        if (!$this->can_upload_forum_image()) {
+            $this->tfaf_upload_error(null, 'User is not allowed to upload forum images.');
             return;
         }
 
-        if (!@getimagesize($_FILES['tfaf_file']['tmp_name'])) {
-            $this->tfaf_upload_error(null, "Can't calculate Image size. Probably a wrong format.");
+        if (!isset($_FILES['tfaf_file']['name'], $_FILES['tfaf_file']['tmp_name'], $_FILES['tfaf_file']['error']) ||
+            !is_string($_FILES['tfaf_file']['name']) ||
+            !is_string($_FILES['tfaf_file']['tmp_name']) ||
+            $_FILES['tfaf_file']['error'] !== UPLOAD_ERR_OK) {
+            $this->tfaf_upload_error(null, 'Invalid file upload.');
             return;
         }
 
-        // Check Filesize
+        // PHP verifies the original temporary path against its registry of HTTP uploads.
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- The exact path is checked with is_uploaded_file() before use.
+        $tmpName = $_FILES['tfaf_file']['tmp_name'];
+        if (!is_uploaded_file($tmpName)) {
+            $this->tfaf_upload_error(null, 'Invalid file upload.');
+            return;
+        }
+
+        $size = filesize($tmpName);
+        if ($size === false || $size === 0) {
+            $this->tfaf_upload_error(null, 'Unable to read the uploaded file size.');
+            return;
+        }
+
         $max_upload = isset($this->iu_options['max_upload']) ? $this->iu_options['max_upload'] : 5;
-        if ($_FILES['tfaf_file']['size'] > ($max_upload * 1048576)) {
+        if ($size > ($max_upload * 1048576)) {
             $this->tfaf_upload_error($max_upload);
             return;
         }
+
+        $image = @getimagesize($tmpName);
+        if (!$image || !in_array($image[2], array(IMAGETYPE_JPEG, IMAGETYPE_GIF, IMAGETYPE_PNG), true)) {
+            $this->tfaf_upload_error(null, 'Unsupported image format.');
+            return;
+        }
+
+        $file = array(
+            'name' => sanitize_file_name($_FILES['tfaf_file']['name']),
+            'tmp_name' => $tmpName,
+            'size' => $size,
+            'error' => UPLOAD_ERR_OK,
+            'type' => $image['mime'],
+        );
 
         // Create temp directory
         $uploadDir = wp_upload_dir();
@@ -136,11 +230,11 @@ class ImageUploadController extends BaseController
             'png' => 'image/png',
         );
 
-        $fileInfo = wp_check_filetype(basename($_FILES['tfaf_file']['name']));
-
-        if (empty($fileInfo['type']))
-            $this->tfaf_upload_error(null, 'error while checking the filetype');
-
+        $fileInfo = wp_check_filetype($file['name'], $allowedMimes);
+        if (empty($fileInfo['type']) || $fileInfo['type'] !== $file['type']) {
+            $this->tfaf_upload_error(null, 'The filename extension does not match the image format.');
+            return;
+        }
 
         // Change upload path to temp folder
         add_filter('upload_dir', array($this, 'tfaf_upload_dir'));
@@ -149,24 +243,28 @@ class ImageUploadController extends BaseController
             require_once(ABSPATH . 'wp-admin/includes/file.php');
         }
 
-        $uploadInfo = wp_handle_upload($_FILES['tfaf_file'], array(
+        $uploadInfo = wp_handle_upload($file, array(
             'test_form' => false,
             'mimes' => $allowedMimes,
         ));
 
-        // Check if upload was successful
-        if (!$uploadInfo || isset($uploadInfo['error'])) {
-            $this->tfaf_upload_error(null, 'Upload was not successful - ' . $uploadInfo['error']);
+        // Always remove the temporary upload directory filter.
+        remove_filter('upload_dir', array($this, 'tfaf_upload_dir'));
+
+        // Check whether the upload succeeded.
+        if (!is_array($uploadInfo) || isset($uploadInfo['error'])) {
+            $error = is_array($uploadInfo) && isset($uploadInfo['error'])
+                ? $uploadInfo['error']
+                : 'Unknown upload error';
+
+            $this->tfaf_upload_error(null, 'Upload was not successful - ' . $error);
             return;
         }
 
-        // Remove temp path
-        remove_filter('upload_dir', 'tfaf_upload_dir');
-
         // Generate temp filename
-        $year = date('Y');
-        $month = date('m');
-        $day = date('d');
+        $year = gmdate('Y');
+        $month = gmdate('m');
+        $day = gmdate('d');
         $fileNumber = 1;
         $length = 6;
 
@@ -179,14 +277,15 @@ class ImageUploadController extends BaseController
         $tempName .= '.' . $fileInfo['ext'];
 
         // Rename File
+        // Upload files are already on the local filesystem. Keep the move atomic.
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
         if (!rename($uploadInfo['file'], $tempUploadDir . '/' . $tempName)) {
             $this->tfaf_upload_error(null, 'Unable to rename the File - ' . $uploadInfo['file']);
             return;
         }
 
 
-        @unlink($_FILES['tfaf_file']['tmp_name']);
-        echo($uploadDir['baseurl'] . '/tfaf/tmp/' . $tempName);
+        echo esc_url($uploadDir['baseurl'] . '/tfaf/tmp/' . $tempName);
         exit;
     }
 
@@ -213,14 +312,16 @@ class ImageUploadController extends BaseController
         $debugging = isset($this->iu_options['debug']) ? $this->iu_options['debug'] : false;
 
         if ($size_limit !== null) {
-            echo("size-error[" . $size_limit . "]");
+            echo("size-error[" . esc_html($size_limit) . "]");
         } else if ($error_message !== null && $debugging && current_user_can('manage_options')) {
             echo '[[tfaf_debugging_mode]]';
-            echo("upload-error[" . $error_message . "]");
+            echo("upload-error[" . esc_html($error_message) . "]");
 
         } else {
             echo("upload-error");
         }
+
+        exit;
     }
 
 
@@ -241,42 +342,45 @@ class ImageUploadController extends BaseController
         if (empty($images[1]))
             return $message;
 
-        // Create upload folder if not exist
-        $year = date('Y');
-        $month = date('m');
-        $day = date('d');
+        $uploadDir = wp_upload_dir();
+        $baseDir = realpath($uploadDir['basedir']);
+        if ($baseDir === false) {
+            return $message;
+        }
 
-        $finalUploadDir = wp_upload_dir()['basedir'] . '/tfaf/' . $year . '/' . $month . '/' . $day;
-        $tempUploadDir = wp_upload_dir()['basedir'] . '/tfaf/tmp';
-        wp_mkdir_p($finalUploadDir);
+        $tempUploadDir = $baseDir . '/tfaf/tmp';
+        if (wp_normalize_path(realpath($tempUploadDir) ?: '') !== wp_normalize_path($tempUploadDir)) {
+            return $message;
+        }
 
-        // Generate Filename
-        $fileNumber = 1;
-        $length = 6;
-
-        do {
-            $fileName = $year . $month . $day . substr(str_repeat(0, $length) . $fileNumber, -$length);
-            $fileNumber++;
-            $duplicates = glob("{$finalUploadDir}/{$fileName}.*");
-        } while (!empty($duplicates));
+        $datePath = gmdate('Y/m/d');
+        $finalUploadDir = $baseDir . '/tfaf/' . $datePath;
 
         foreach (array_unique($images[1]) as $match) {
-            if (strpos($match, '/') || strpos($match, '\\')) {
+            // Accept only the temporary image filenames generated by the uploader.
+            if (!preg_match('/\A[0-9]{14}\.(jpg|jpeg|jpe|png|gif)\z/i', $match, $filenameParts)) {
                 continue;
             }
 
-            $fileName = $year . $month . $day . substr(str_repeat(0, $length) . ($fileNumber - 1), -$length);
-            $fileNumber++;
+            $sourceFile = $tempUploadDir . '/' . $match;
+            if (is_link($sourceFile) || !is_file($sourceFile)) {
+                continue;
+            }
 
-            // Add file extension
-            $dotPos = strrpos($match, '.');
-            if ($dotPos)
-                $fileName .= substr($match, $dotPos);
+            if (!wp_mkdir_p($finalUploadDir) ||
+                wp_normalize_path(realpath($finalUploadDir) ?: '') !== wp_normalize_path($finalUploadDir)) {
+                return $message;
+            }
 
-            @rename($tempUploadDir . '/' . $match, $finalUploadDir . '/' . $fileName);
+            // Use an independent name for each move so concurrent posts do not reuse a sequence number.
+            $fileName = wp_generate_password(32, false, false) . '.' . strtolower($filenameParts[1]);
+            // Keep the validated local move atomic without filesystem credentials.
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+            if (!@rename($sourceFile, $finalUploadDir . '/' . $fileName)) {
+                continue;
+            }
 
-            // replace path in post
-            $message = str_replace('/tfaf/tmp/' . $match, '/tfaf/' . $year . '/' . $month . '/' . $day . '/' . $fileName, $message);
+            $message = str_replace('/tfaf/tmp/' . $match, '/tfaf/' . $datePath . '/' . $fileName, $message);
 
             // Increase counter for notifications
             if (!isset($this->iu_options['upload_counter'])) {
@@ -316,12 +420,25 @@ class ImageUploadController extends BaseController
      */
     function clean_tmp_dir()
     {
-        $uploadDir = wp_upload_dir()['basedir'] . '/tfaf/tmp';
+        $baseDir = realpath(wp_upload_dir()['basedir']);
+        if ($baseDir === false) {
+            return;
+        }
 
-        foreach (scandir($uploadDir) as $file) {
-            $file = $uploadDir . '/' . $file;
-            if (is_file($file) && filemtime($file) < time() - 86400)
-                @unlink($file);
+        $uploadDir = $baseDir . '/tfaf/tmp';
+        if (wp_normalize_path(realpath($uploadDir) ?: '') !== wp_normalize_path($uploadDir)) {
+            return;
+        }
+
+        foreach (scandir($uploadDir) ?: array() as $name) {
+            if (!preg_match('/\A[0-9]{14}\.(?:jpg|jpeg|jpe|png|gif)\z/i', $name)) {
+                continue;
+            }
+
+            $file = $uploadDir . '/' . $name;
+            if (!is_link($file) && is_file($file) && filemtime($file) < time() - 86400) {
+                wp_delete_file($file);
+            }
         }
     }
 

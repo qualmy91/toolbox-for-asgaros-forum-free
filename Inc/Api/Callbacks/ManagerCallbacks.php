@@ -3,6 +3,10 @@
 
 namespace Tfaf\Inc\Api\Callbacks;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Base/BaseController.php';
 
 use Tfaf\Inc\Base\BaseController;
@@ -68,9 +72,9 @@ class ManagerCallbacks extends BaseController
             $warning .= '<span class="tfaf-warning">' . esc_html__('Asgaros Forum must be installed to use this tool', 'toolbox-for-asgaros-forum') . '</span>';
         }
 
-        echo '<div class="' . $classes . '"><input type="checkbox" id="' . $name . '" name="' . $option_name . '[' .
-            $name . ']" value="1" ' . ($checked ? 'checked' : '') . ' ' . $disabled . '><label for="' . $name .
-            '"><div></div></label>' . $warning . '</div>';
+        echo '<div class="' . esc_attr($classes) . '"><input type="checkbox" id="' . esc_attr($name) . '" name="' . esc_attr($option_name) . '[' .
+            esc_attr($name) . ']" value="1" ' . ($checked ? 'checked' : '') . ' ' . ($disabled ? 'disabled' : '') . '><label for="' . esc_attr($name) .
+            '"><div></div></label>' . wp_kses($warning, array('span' => array('class' => true), 'br' => array())) . '</div>';
     }
 
 }

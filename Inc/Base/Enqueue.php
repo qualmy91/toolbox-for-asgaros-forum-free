@@ -2,6 +2,10 @@
 
 namespace Tfaf\Inc\Base;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Base/BaseController.php';
 
 use Tfaf\Inc\Base\BaseController;
@@ -28,8 +32,19 @@ class Enqueue extends BaseController
      */
     function enqueue_admin()
     {
-        wp_enqueue_style('mypluginstyle', TFAF_PLUGIN_URL . '/assets/mystyle.css');
-        wp_enqueue_script('mypluginscript', TFAF_PLUGIN_URL . '/assets/admin.js');
+        wp_enqueue_style(
+            'mypluginstyle',
+            TFAF_PLUGIN_URL . 'assets/mystyle.css',
+            array(),
+            TFAF_VERSION
+        );
+        wp_enqueue_script(
+            'mypluginscript',
+            TFAF_PLUGIN_URL . 'assets/admin.js',
+            array('jquery'),
+            TFAF_VERSION,
+            true
+        );
     }
 
     /**
@@ -37,6 +52,11 @@ class Enqueue extends BaseController
      */
     function enqueue_asgaros()
     {
-        wp_enqueue_style('asgaros', TFAF_PLUGIN_URL . '/assets/asgaros.css');
+        wp_enqueue_style(
+            'asgaros',
+            TFAF_PLUGIN_URL . 'assets/asgaros.css',
+            array(),
+            TFAF_VERSION
+        );
     }
 }

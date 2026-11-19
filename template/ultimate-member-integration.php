@@ -1,3 +1,8 @@
+<?php
+if (!defined('ABSPATH')) {
+    exit;
+}
+?>
 <div class="tfaf_admin_wrapper">
     <h1><?php esc_html_e('Shortcodes for Ultimate Member', 'toolbox-for-asgaros-forum') ?></h1>
 
@@ -32,6 +37,6 @@
 
     <p><strong><?php esc_html_e('Preview of the Ultimate Member Profile Tab:', 'toolbox-for-asgaros-forum') ?></strong>
     </p>
-    <img src="<?php echo TFAF_PLUGIN_URL . 'assets/images/user_history.jpg' ?>">
+    <img src="<?php echo esc_url(TFAF_PLUGIN_URL . 'assets/images/user_history.jpg'); ?>">
 
 </div>

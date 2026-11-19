@@ -3,6 +3,10 @@
 
 namespace Tfaf\Inc\Base;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/SettingsApi.php';
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/Callbacks/AdminCallbacks.php';
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/Callbacks/CmeCallbacks.php';
@@ -120,7 +124,12 @@ class CustomMenuController extends BaseController
 
     // remove Header Menu
     function removeHeaderMenu( $menu_entries) {
-        wp_enqueue_style('tfaf_hide_header', TFAF_PLUGIN_URL . '/assets/hide-header.css');
+        wp_enqueue_style(
+            'tfaf_hide_header',
+            TFAF_PLUGIN_URL . 'assets/hide-header.css',
+            array(),
+            TFAF_VERSION
+        );
         return array();
     }
 
@@ -159,8 +168,8 @@ class CustomMenuController extends BaseController
 
             // Check if user is logged in or has to be locked in
             if ($show_entry) {
-                $new_tab = (isset($custom_menu_entry['menu_new_tab'])) ? ' target="_blank"' : '';
-                echo '<a class="'. $menu_class . '" href="' . $menu_url . '"' . $new_tab . '>' .
+                $new_tab = isset($custom_menu_entry['menu_new_tab']);
+                echo '<a class="' . esc_attr($menu_class) . '" href="' . esc_url($menu_url) . '"' . ($new_tab ? ' target="_blank"' : '') . '>' .
                     esc_html($custom_menu_entry['menu_link_text']) . '</a>';
             }
         }

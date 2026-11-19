@@ -2,6 +2,10 @@
 
 namespace Tfaf\Inc\Base;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/SettingsApi.php';
 require_once TFAF_PLUGIN_PATH . 'Inc/Api/Callbacks/AdminCallbacks.php';
 require_once TFAF_PLUGIN_PATH . 'Inc/Base/BaseController.php';
@@ -73,7 +77,12 @@ class UltimateMemberIntegrationController extends BaseController
     {
 
         // enqueue style
-        wp_enqueue_style('tfaf_activity_style', TFAF_PLUGIN_URL . '/assets/um_integration.css');
+        wp_enqueue_style(
+            'tfaf_activity_style',
+            TFAF_PLUGIN_URL . 'assets/um_integration.css',
+            array(),
+            TFAF_VERSION
+        );
 
         $profile_id = um_profile_id();
         ob_start();
@@ -81,23 +90,23 @@ class UltimateMemberIntegrationController extends BaseController
         echo '<div class="tfaf_wrapper">';
         echo '<div class="profile-section-header">';
         echo '<span class="profile-section-header-icon fas fa-address-card"></span>';
-        echo __('Member Activity', 'asgaros-forum');
+        echo esc_html__('Member Activity', 'toolbox-for-asgaros-forum');
         echo '</div>';
 
         echo '<div class="profile-section-content">';
         // Topics started.
         $count_topics = $this->asgaros_forum->countTopicsByUser($profile_id);
-        AsgarosForumStatistics::renderStatisticsElement(__('Topics Started', 'asgaros-forum'), $count_topics, 'far fa-comments');
+        AsgarosForumStatistics::renderStatisticsElement(__('Topics Started', 'toolbox-for-asgaros-forum'), $count_topics, 'far fa-comments');
 
         // Replies created.
         $count_posts = $this->asgaros_forum->countPostsByUser($profile_id);
         $count_posts = $count_posts - $count_topics;
-        AsgarosForumStatistics::renderStatisticsElement(__('Replies Created', 'asgaros-forum'), $count_posts, 'far fa-comment');
+        AsgarosForumStatistics::renderStatisticsElement(__('Replies Created', 'toolbox-for-asgaros-forum'), $count_posts, 'far fa-comment');
 
         // Likes Received.
         if ($this->asgaros_forum->options['enable_reactions']) {
             $count_likes = $this->asgaros_forum->reactions->get_reactions_received($profile_id, 'up');
-            AsgarosForumStatistics::renderStatisticsElement(__('Likes Received', 'asgaros-forum'), $count_likes, 'fas fa-thumbs-up');
+            AsgarosForumStatistics::renderStatisticsElement(__('Likes Received', 'toolbox-for-asgaros-forum'), $count_likes, 'fas fa-thumbs-up');
         }
         echo '</div></div>';
 
@@ -114,7 +123,12 @@ class UltimateMemberIntegrationController extends BaseController
     {
 
         // enqueue style
-        wp_enqueue_style('tfaf_activity_style', TFAF_PLUGIN_URL . '/assets/um_integration.css');
+        wp_enqueue_style(
+            'tfaf_activity_style',
+            TFAF_PLUGIN_URL . 'assets/um_integration.css',
+            array(),
+            TFAF_VERSION
+        );
 
         $user_id = um_profile_id();
 
@@ -125,7 +139,7 @@ class UltimateMemberIntegrationController extends BaseController
         $posts = $this->get_post_history_by_user($user_id, true);
 
         if (empty($posts)) {
-            _e('No posts made by this user.', 'asgaros-forum');
+            esc_html_e('No posts made by this user.', 'toolbox-for-asgaros-forum');
         } else {
 
             foreach ($posts as $post) {
@@ -136,19 +150,20 @@ class UltimateMemberIntegrationController extends BaseController
                 $this->asgaros_forum->rewrite->set_links();
 
                 $link = $this->asgaros_forum->rewrite->get_post_link($post->id, $post->parent_id);
-                $text = esc_html(stripslashes(strip_tags($post->text)));
+                $text = esc_html(stripslashes(wp_strip_all_tags($post->text)));
                 $text = $this->asgaros_forum->cut_string($text, 100);
 
-                echo '<a class="history-title" href="' . $link . '">' . $text . '</a>';
+                echo '<a class="history-title" href="' . esc_url($link) . '">' . esc_html($text) . '</a>';
 
                 $topic_link = $this->asgaros_forum->rewrite->get_link('topic', $post->parent_id);
                 $topic_name = esc_html(stripslashes($post->name));
-                $topic_time = sprintf(__('%s ago', 'asgaros-forum'), human_time_diff(strtotime($post->date), current_time('timestamp')));
+                /* translators: %s: Human-readable time difference. */
+                $topic_time = sprintf(__('%s ago', 'toolbox-for-asgaros-forum'), human_time_diff(strtotime($post->date), current_time('timestamp')));
 
-                echo '<span class="history-topic">' . __('In:', 'asgaros-forum') . ' <a href="' . $topic_link . '">' . $topic_name . '</a></span>';
+                echo '<span class="history-topic">' . esc_html__('In:', 'toolbox-for-asgaros-forum') . ' <a href="' . esc_url($topic_link) . '">' . esc_html($topic_name) . '</a></span>';
                 echo '</div>';
 
-                echo '<div class="history-time">' . $topic_time . '</div>';
+                echo '<div class="history-time">' . esc_html($topic_time) . '</div>';
                 echo '</div>';
             }
 
